@@ -27,20 +27,92 @@
 		this.cachedEndpointPositionX = null;
 		this.cachedEndpointPositionY = null;
 		this.cachedEndpointPositionZ = null;
+		
+		// Storage for channel transformations
+		this.channelValues = {};
 	}
 	
 	Bone.prototype = {
 		"constructor": Bone,  // Appear as a bivouac object
 		
 		"getPosition": function(endPoint) {
+			var position = [0,0,0];
 			// Recursively calculate position
-			if (!!this.parent) {
+			// If we have the ability, run this function on our parent
+			// to determine it's offset first.
+			
+			if (this.cachedPositionX === null ||
+				this.cachedPositionY === null ||
+				this.cachedPositionZ === null) {
 				
+				if (!!this.parent) {
+					var parentPosition = endPoint ? this.getPosition() : this.parent.getPosition();
+					var transformSubject = endPoint ? this : this.parent;
+					var eulerTransform = [
+							(transformSubject.channelValues["Xrotation"] || 0),
+							(transformSubject.channelValues["Yrotation"] || 0),
+							(transformSubject.channelValues["Zrotation"] || 0)];
+				
+					// Ignore rotational transform for now. It's going to be a hard one to work out.
+					// I'll stress about it once I've got just positional stuff working.
+					if (!endPoint) {
+						this.cachedPositionX = parentPosition[0] + this.offsetX + (!isNaN(this.channelValues["Xposition"]) ? this.channelValues["Xposition"] : 0);
+						this.cachedPositionY = parentPosition[1] + this.offsetY + (!isNaN(this.channelValues["Yposition"]) ? this.channelValues["Yposition"] : 0);
+						this.cachedPositionZ = parentPosition[2] + this.offsetZ + (!isNaN(this.channelValues["Zposition"]) ? this.channelValues["Zposition"] : 0);
+					} else {
+						this.cachedEndpointPositionX = parentPosition[0] + this.offsetX;
+						this.cachedEndpointPositionY = parentPosition[1] + this.offsetY;
+						this.cachedEndpointPositionZ = parentPosition[2] + this.offsetZ;
+					}
+				
+				} else {
+					// Haven't found any good BVH documentation yet, so working this out as I go.
+					// I'm assuming the channel values for x/y/z position are relative to the offset and not exclusive.
+					// Because my test data has the root node offset at 0,0,0 I can't really test this. Feel free to
+					// correct me.
+				
+					// If we're the root node, we don't calculate rotation, since we're just a point.
+					// Any rotation applied to this node is initially calculated one level up.
+				
+					this.cachedPositionX = !isNaN(this.channelValues["Xposition"]) ?
+											this.offsetX + this.channelValues["Xposition"] : 
+											this.offsetX;
+				
+					this.cachedPositionY = !isNaN(this.channelValues["Yposition"]) ?
+											this.offsetY + this.channelValues["Yposition"] : 
+											this.offsetY;
+				
+					this.cachedPositionZ = !isNaN(this.channelValues["Xposition"]) ?
+											this.offsetX + this.channelValues["Xposition"] :
+											this.offsetX;
+				}
 			}
+			
+			if (!endPoint) {
+				position = [this.cachedPositionX,this.cachedPositionY,this.cachedPositionZ];
+			} else {
+				position = [this.cachedEndpointPositionX,this.cachedEndpointPositionY,this.cachedEndpointPositionZ];
+			}
+			
+			return position;
 		},
 		
-		"setChannelValue": function() {
-			
+		"setChannelValue": function(channelName,value) {
+			if (!!allowedChannels[channelName]) {
+				if (this.channelValues[channelName] !== parseFloat(value)) {
+					this.channelValues[channelName] = parseFloat(value);
+					
+					// Clear cache
+					this.cachedPositionX = null;
+					this.cachedPositionY = null;
+					this.cachedPositionZ = null;
+					this.cachedEndpointPositionX = null;
+					this.cachedEndpointPositionY = null;
+					this.cachedEndpointPositionZ = null;
+				}
+			} else {
+				throw new Error("Fatal Error: Unknown/disallowed channel type: " + token);
+			}
 		}
 	};
 	
@@ -55,7 +127,7 @@
 		this.frameCount = 0;
 		this.frames = [];
 		
-		if (data && data.length) this.parse(data);
+		if (data && data.length) this.parse(data); this.getForFrame(0);
 	}
 	
 	Bivouac.prototype = {
@@ -69,7 +141,28 @@
 		},
 		
 		"getForFrame": function(frame) {
-			
+			var self = this;
+			if (self.frames.length && self.frames[frame] && self.frames[frame].length) {
+				self.channels.forEach(function(channel,index) {
+					// Set value...
+					self.boneList[channel[0]].setChannelValue(channel[1],self.frames[frame][index]);
+				});
+				
+				// Loop through bones and calculate new position...
+				for (bone in self.boneList) {
+					if (self.boneList.hasOwnProperty(bone)) {
+						self.boneList[bone].getPosition();
+						
+						if (self.boneList[bone].endSite) {
+							self.boneList[bone].getPosition(true);
+						}
+					}
+				}
+				
+				return self.skeleton;
+			} else {
+				throw new Error("Could not seek to frame. Missing frame or bad index.");
+			}
 		},
 		
 		"setOffset": function(x,y,z) {
