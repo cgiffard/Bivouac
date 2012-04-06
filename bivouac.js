@@ -109,22 +109,26 @@
 							(transformSubject.channelValues["Yrotation"] || 0),
 							(transformSubject.channelValues["Zrotation"] || 0)];
 					
-					// Ignore rotational transform for now. It's going to be a hard one to work out.
-					// I'll stress about it once I've got just positional stuff working.
-					self.cachedPositionX = parentPosition[0] + self.offsetX + (!isNaN(self.channelValues["Xposition"]) ? self.channelValues["Xposition"] : 0);
-					self.cachedPositionY = parentPosition[1] + self.offsetY + (!isNaN(self.channelValues["Yposition"]) ? self.channelValues["Yposition"] : 0);
-					self.cachedPositionZ = parentPosition[2] + self.offsetZ + (!isNaN(self.channelValues["Zposition"]) ? self.channelValues["Zposition"] : 0);
+					var tmpPosition = [self.offsetX, self.offsetY, self.offsetZ];
 					
 					["X","Y","Z"].forEach(function(d) {
 						if (!isNaN(self.channelValues[d + "rotation"])) {
 							var rFunction = d === "X" ? rotateX : d === "Y" ? rotateY : rotateZ;
-							var rotation = rFunction([self.cachedPositionX,self.cachedPositionY,self.cachedPositionZ],self.channelValues["Xrotation"]);
+							tmpPosition = rFunction(tmpPosition,self.channelValues[d+"rotation"]);
 							
-							self.cachedPositionX = rotation[0];
-							self.cachedPositionY = rotation[1];
-							self.cachedPositionZ = rotation[2];
+							// self.cachedPositionX = rotation[0];
+							// 							self.cachedPositionY = rotation[1];
+							// 							self.cachedPositionZ = rotation[2];
 						}
 					});
+					
+					// Ignore rotational transform for now. It's going to be a hard one to work out.
+					// I'll stress about it once I've got just positional stuff working.
+					self.cachedPositionX = parentPosition[0] + tmpPosition[0] + (!isNaN(self.channelValues["Xposition"]) ? self.channelValues["Xposition"] : 0);
+					self.cachedPositionY = parentPosition[1] + tmpPosition[1] + (!isNaN(self.channelValues["Yposition"]) ? self.channelValues["Yposition"] : 0);
+					self.cachedPositionZ = parentPosition[2] + tmpPosition[2] + (!isNaN(self.channelValues["Zposition"]) ? self.channelValues["Zposition"] : 0);
+					
+					
 					
 				} else {
 					// Haven't found any good BVH documentation yet, so working this out as I go.
