@@ -14,7 +14,7 @@
 		
 		var context = canvas.getContext("2d");
 		
-		var camera		= new perspex.Camera(-400,-400,-400,-0.4,0,-0.2,height,width,-200),
+		var camera		= new perspex.Camera(-600,-600,-800,-0.4,0,-0.2,height,width,-1000),
 			projection	= perspex(camera,{ clamp: false });
 			
 		// Listening for mouse events
@@ -29,12 +29,12 @@
 		
 		
 		// Mocap render function
-		var frame = 0;
+		var frame = 10;
 		function renderMocap(mocap) {
 			// Advance to frame
 			mocap.getForFrame(frame);
 			
-			context.fillStyle = "rgba(255,255,255,0.03)";
+			context.fillStyle = "rgba(255,255,255,1)";
 			context.fillRect(0,0,width,height);
 			context.fillStyle = "black";
 			
@@ -46,7 +46,23 @@
 			for (var bone in mocap.boneList) {
 				if (mocap.boneList.hasOwnProperty(bone)) {
 					var bone = mocap.boneList[bone];
+					
+					if (bone.endSite) {
+						context.fillStyle = "red";
+						context.strokeStyle = "red";
+					} else {
+						context.fillStyle = "black";
+						context.strokeStyle = "black";
+					}
+					
 					context.fillRect.apply(context,projection.project(bone.cachedPositionX,bone.cachedPositionY,bone.cachedPositionZ).concat([3,3]));
+					
+					if (bone.parent) {
+						context.beginPath();
+						context.moveTo.apply(context,projection.project(bone.parent.cachedPositionX,bone.parent.cachedPositionY,bone.parent.cachedPositionZ));
+						context.lineTo.apply(context,projection.project(bone.cachedPositionX,bone.cachedPositionY,bone.cachedPositionZ));
+						context.stroke();
+					}
 				}
 			}
 			
@@ -55,15 +71,15 @@
 			} else {
 				frame = 0;
 			}
-			
+						
 			window.setTimeout(function() {
 				renderMocap(mocap);
-			}, mocap.frameTime);
+			}, mocap.frameTime*2);
 		}
 		
 		loadBVH("kashiyuka",renderMocap);
-		loadBVH("aachan",renderMocap);
-		loadBVH("nocchi",renderMocap);
+		// loadBVH("aachan",renderMocap);
+		// 		loadBVH("nocchi",renderMocap);
 	},false);
 	
 	function loadBVH(name,callback) {

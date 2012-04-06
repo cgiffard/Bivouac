@@ -24,10 +24,6 @@
 		this.cachedPositionY = null;
 		this.cachedPositionZ = null;
 		
-		this.cachedEndpointPositionX = null;
-		this.cachedEndpointPositionY = null;
-		this.cachedEndpointPositionZ = null;
-		
 		// Storage for channel transformations
 		this.channelValues = {};
 	}
@@ -35,42 +31,107 @@
 	Bone.prototype = {
 		"constructor": Bone,  // Appear as a bivouac object
 		
-		"getPosition": function(endPoint) {
-			var position = [0,0,0];
+		"getPosition": function() {
+			var self = this;
+			
 			// Recursively calculate position
 			// If we have the ability, run this function on our parent
 			// to determine it's offset first.
 			
-			if (this.cachedPositionX === null ||
-				this.cachedPositionY === null ||
-				this.cachedPositionZ === null) {
+			
+			// Check cache validity, scanning up tree toward root until
+			// root is reached, or a cache-invalidated node (Whatever comes first)
+			function checkCacheValidity() {
+				var bone = self;
+				
+				if (bone.endSite) {
+					return false;
+				}
+				
+				while(bone !== null) {
+					if (bone.cachedPositionX === null ||
+						bone.cachedPositionY === null ||
+						bone.cachedPositionZ === null) {
+						
+						// This ancestor bone had its cache invalidated.
+						// Our cache should be considered invalid too.
+						return false;
+					} else {
+						bone = bone.parent;
+					}
+				}
+				
+				return true;
+			}
+			
+			// Functions for running rotational transforms
+			function rotateX(point, angle) {
+		        var rad		= angle * Math.PI / 180,
+					cosa	= Math.cos(rad),
+					sina	= Math.sin(rad),
+					x, y, z;
+				
+		        y = point[1] * cosa - point[2] * sina
+		        z = point[1] * sina + point[2] * cosa
+		        return [point[0], y, z];
+			}
+			
+			function rotateY(point, angle) {
+		        var rad		= angle * Math.PI / 180,
+					cosa	= Math.cos(rad),
+					sina	= Math.sin(rad),
+					x, y, z;
+				
+		        z = point[2] * cosa - point[0] * sina
+		        x = point[2] * sina + point[0] * cosa
+		        return [x, point[1], z];
+			}
+			
+			function rotateZ(point, angle) {
+		        var rad		= angle * Math.PI / 180,
+					cosa	= Math.cos(rad),
+					sina	= Math.sin(rad),
+					x, y, z;
+				
+		        x = point[0] * cosa - point[1] * sina
+		        y = point[0] * sina + point[1] * cosa
+		        return [x, y, point[2]];
+			}
+			
+			if (!checkCacheValidity()) {
 				
 				if (!!this.parent) {
-					var parentPosition = endPoint ? this.getPosition() : this.parent.getPosition();
-					var transformSubject = endPoint ? this : this.parent;
+					
+					var parentPosition = self.parent.getPosition();
+					var transformSubject = self.parent;
 					var eulerTransform = [
 							(transformSubject.channelValues["Xrotation"] || 0),
 							(transformSubject.channelValues["Yrotation"] || 0),
 							(transformSubject.channelValues["Zrotation"] || 0)];
-				
+					
 					// Ignore rotational transform for now. It's going to be a hard one to work out.
 					// I'll stress about it once I've got just positional stuff working.
-					if (!endPoint) {
-						this.cachedPositionX = parentPosition[0] + this.offsetX + (!isNaN(this.channelValues["Xposition"]) ? this.channelValues["Xposition"] : 0);
-						this.cachedPositionY = parentPosition[1] + this.offsetY + (!isNaN(this.channelValues["Yposition"]) ? this.channelValues["Yposition"] : 0);
-						this.cachedPositionZ = parentPosition[2] + this.offsetZ + (!isNaN(this.channelValues["Zposition"]) ? this.channelValues["Zposition"] : 0);
-					} else {
-						this.cachedEndpointPositionX = parentPosition[0] + this.offsetX;
-						this.cachedEndpointPositionY = parentPosition[1] + this.offsetY;
-						this.cachedEndpointPositionZ = parentPosition[2] + this.offsetZ;
-					}
-				
+					self.cachedPositionX = parentPosition[0] + self.offsetX + (!isNaN(self.channelValues["Xposition"]) ? self.channelValues["Xposition"] : 0);
+					self.cachedPositionY = parentPosition[1] + self.offsetY + (!isNaN(self.channelValues["Yposition"]) ? self.channelValues["Yposition"] : 0);
+					self.cachedPositionZ = parentPosition[2] + self.offsetZ + (!isNaN(self.channelValues["Zposition"]) ? self.channelValues["Zposition"] : 0);
+					
+					["X","Y","Z"].forEach(function(d) {
+						if (!isNaN(self.channelValues[d + "rotation"])) {
+							var rFunction = d === "X" ? rotateX : d === "Y" ? rotateY : rotateZ;
+							var rotation = rFunction([self.cachedPositionX,self.cachedPositionY,self.cachedPositionZ],self.channelValues["Xrotation"]);
+							
+							self.cachedPositionX = rotation[0];
+							self.cachedPositionY = rotation[1];
+							self.cachedPositionZ = rotation[2];
+						}
+					});
+					
 				} else {
 					// Haven't found any good BVH documentation yet, so working this out as I go.
 					// I'm assuming the channel values for x/y/z position are relative to the offset and not exclusive.
 					// Because my test data has the root node offset at 0,0,0 I can't really test this. Feel free to
 					// correct me.
-				
+					
 					// If we're the root node, we don't calculate rotation, since we're just a point.
 					// Any rotation applied to this node is initially calculated one level up.
 				
@@ -88,13 +149,7 @@
 				}
 			}
 			
-			if (!endPoint) {
-				position = [this.cachedPositionX,this.cachedPositionY,this.cachedPositionZ];
-			} else {
-				position = [this.cachedEndpointPositionX,this.cachedEndpointPositionY,this.cachedEndpointPositionZ];
-			}
-			
-			return position;
+			return [this.cachedPositionX,this.cachedPositionY,this.cachedPositionZ];
 		},
 		
 		"setChannelValue": function(channelName,value) {
@@ -106,9 +161,6 @@
 					this.cachedPositionX = null;
 					this.cachedPositionY = null;
 					this.cachedPositionZ = null;
-					this.cachedEndpointPositionX = null;
-					this.cachedEndpointPositionY = null;
-					this.cachedEndpointPositionZ = null;
 				}
 			} else {
 				throw new Error("Fatal Error: Unknown/disallowed channel type: " + token);
@@ -152,10 +204,6 @@
 				for (bone in self.boneList) {
 					if (self.boneList.hasOwnProperty(bone)) {
 						self.boneList[bone].getPosition();
-						
-						if (self.boneList[bone].endSite) {
-							self.boneList[bone].getPosition(true);
-						}
 					}
 				}
 				
@@ -201,7 +249,6 @@
 				parentBone			= currentBone,		// For hierarchy creation
 				channelMappings		= [],				// Map indexed channels to bone attributes
 				blocksOpen			= 0,				// For ensuring the file is balanced...
-				endSite				= false,			// Are we currently in a bone endsite?
 				parameterCount		= 0;				// For tracking ordered parameters to declarations (like XYZ)
 			
 			String.prototype.rep = function(c) { var r = ""; while (r.length < this.length * c) {r+=this}return r;};
@@ -226,10 +273,33 @@
 						
 					} else if (token === "End" || token === "Site") {
 						// End site...
-						currentToken = "End";
-						currentBone.endSite = true;
-						endSite = true;
-					
+						// Don't run this twice for 'End' and 'Site'.
+						if (currentToken !== "End") {
+							currentToken = "End";
+						
+							if (currentBone instanceof Bone) {
+								if (currentBone.endSite) {
+									throw new Error("Fatal Error: Can't nest bone End Sites.");
+								}
+							
+								var currentBoneName = currentBone.name + "EndSite";
+							
+								// Set up endsite bone...
+								var tmpBone = new Bone(currentBoneName);
+								tmpBone.endSite = true;
+								tmpBone.parent = currentBone;
+							
+								// And relegate current bone to be the parent...
+								parentBone = currentBone;
+								parentBone.children.push(tmpBone);
+								currentBone = tmpBone;
+							
+								// Add current bone to list...
+								self.boneList[currentBoneName] = currentBone;
+							} else {
+								throw new Error("Fatal Error: Uncontained end-site.")
+							}
+						}
 					} else if (token === "{") {
 						// Opening block...
 						blocksOpen ++;
@@ -239,24 +309,18 @@
 						// Jump up the heirarchy by one bone (hah!)
 						if (blocksOpen > 0) {
 							blocksOpen --;
-								
-							if (endSite) {
-								// We /were/ in an endSite block. Now we're not.
-								endSite = false;
-									
+							
+							// We're tracking a parent for this bone.
+							if (currentBone instanceof Bone && currentBone.parent !== null) {
+										
+								// Shift pointer back to parent bone
+								currentBone = currentBone.parent;
+								parentBone = currentBone.parent;
+										
+							// We're not tracking a parent for this bone. Jump to root level.
 							} else {
-								// We're tracking a parent for this bone.
-								if (currentBone instanceof Bone && currentBone.parent !== null) {
-										
-									// Shift pointer back to parent bone
-									currentBone = currentBone.parent;
-									parentBone = currentBone.parent;
-										
-								// We're not tracking a parent for this bone. Jump to root level.
-								} else {
-									currentBone = hierarchy;
-									parentBone = null;
-								}
+								currentBone = hierarchy;
+								parentBone = null;
 							}
 						} else {
 							throw new Error("Fatal Error: Unbalanced block index!");
@@ -325,11 +389,7 @@
 						}
 						
 						// Save offset - ascertain axis by parameter count
-						if (endSite) {
-							currentBone["endOffset" + ["X","Y","Z"][parameterCount]] = parseFloat(token);
-						} else {
-							currentBone["offset" + ["X","Y","Z"][parameterCount]] = parseFloat(token);
-						}
+						currentBone["offset" + ["X","Y","Z"][parameterCount]] = parseFloat(token);
 						
 						// Increment parameter count...
 						parameterCount ++;
