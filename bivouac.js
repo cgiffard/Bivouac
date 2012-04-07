@@ -7,6 +7,128 @@
 	// These are channel types we support...
 	var allowedChannels = {"Xposition":1, "Yposition":1, "Zposition":1, "Xrotation":1, "Yrotation":1, "Zrotation":1};
 	
+	// Functions for running rotational transforms
+	function rotateX(point, angle) {
+	    var rad		= angle * Math.PI / 180,
+			cosa	= Math.cos(rad),
+			sina	= Math.sin(rad),
+			x, y, z;
+								
+	    y = point[1] * cosa - point[2] * sina
+	    z = point[1] * sina + point[2] * cosa
+	    return [point[0], y, z];
+	}
+							
+	function rotateY(point, angle) {
+	    var rad		= angle * Math.PI / 180,
+			cosa	= Math.cos(rad),
+			sina	= Math.sin(rad),
+			x, y, z;
+								
+	    z = point[2] * cosa - point[0] * sina
+	    x = point[2] * sina + point[0] * cosa
+	    return [x, point[1], z];
+	}
+							
+	function rotateZ(point, angle) {
+	    var rad		= angle * Math.PI / 180,
+			cosa	= Math.cos(rad),
+			sina	= Math.sin(rad),
+			x, y, z;
+								
+	    x = point[0] * cosa - point[1] * sina
+	    y = point[0] * sina + point[1] * cosa
+	    return [x, y, point[2]];
+	}
+	
+	// Function for recursing through skeleton and processing bone position/rotation
+	function processBone(bone,transformationList) {
+		
+		// Because rotational transformations are cumulative, we need somewhere to store them as we recurse through
+		transformationList = transformationList || [];
+		
+		// Storage for positional data
+		var tmpPosition = [0,0,0];
+		
+		if (!!bone.parent) {
+			var parentPosition = bone.parent.getPosition();
+			var transformSubject = bone.parent;
+			
+			tmpPosition = [
+				bone.offsetX,
+				bone.offsetY,
+				bone.offsetZ
+			];
+			
+			// Run through a list of our collected transformations for this bone...
+			transformationList.forEach(function(transformation) {
+				// Relative position based on the rotation origin
+				var relativePosition = [
+					tmpPosition[0],
+					tmpPosition[1],
+					tmpPosition[2]
+				];
+				
+				["X","Y","Z"].forEach(function(d,i) {
+					if (!!transformation.rotation[i]) {
+						var rFunction = d === "X" ? rotateX : d === "Y" ? rotateY : rotateZ;
+						tmpPosition = rFunction(relativePosition,transformation.rotation[i]);
+					}
+				});
+			});
+			
+			// Now we set our position relative to that of our direct parent.
+			tmpPosition[0] = parentPosition[0] + tmpPosition[0] + (!isNaN(bone.channelValues["Xposition"]) ? bone.channelValues["Xposition"] : 0);
+			tmpPosition[1] = parentPosition[1] + tmpPosition[1] + (!isNaN(bone.channelValues["Yposition"]) ? bone.channelValues["Yposition"] : 0);
+			tmpPosition[2] = parentPosition[2] + tmpPosition[2] + (!isNaN(bone.channelValues["Zposition"]) ? bone.channelValues["Zposition"] : 0);
+			
+		} else {
+			// Haven't found any good BVH documentation yet, so working this out as I go.
+			// I'm assuming the channel values for x/y/z position are relative to the offset and not exclusive.
+			// Because my test data has the root node offset at 0,0,0 I can't really test this. Feel free to
+			// correct me.
+			
+			// If we're the root node, we don't calculate rotation, since we're just a point.
+			// Any rotation applied to this node is initially calculated one level up.
+			
+			tmpPosition[0] = !isNaN(bone.channelValues["Xposition"]) ?
+									bone.offsetX + bone.channelValues["Xposition"] : 
+									bone.offsetX;
+			
+			tmpPosition[1] = !isNaN(bone.channelValues["Yposition"]) ?
+									bone.offsetY + bone.channelValues["Yposition"] : 
+									bone.offsetY;
+			
+			tmpPosition[2] = !isNaN(bone.channelValues["Zposition"]) ?
+									bone.offsetZ + bone.channelValues["Zposition"] :
+									bone.offsetZ;
+		}
+		
+		// Save the bone values back to the bone
+		bone.calcPosX = tmpPosition[0];
+		bone.calcPosY = tmpPosition[1];
+		bone.calcPosZ = tmpPosition[2];
+		
+		// Save any transformations in the transformation stack...
+		transformationList.push({
+			"rotation":[
+				(bone.channelValues["Xrotation"] || 0),
+				(bone.channelValues["Yrotation"] || 0),
+				(bone.channelValues["Zrotation"] || 0)
+			],
+			"origin": tmpPosition
+		});
+		
+		// Now process all our children
+		bone.children.forEach(function(bone) {
+			
+			// We're slicing the list so we generate a new array for this recursion - rather than modifying it.
+			// If we don't create a new instance of this data, we'll retain transformations from sibling skeleton
+			// branches which shouldn't apply.
+			processBone(bone,transformationList.slice(0));
+		});
+	}
+	
 	function Bone(name) {
 		this.name = name ? name : "Untitled";
 		
@@ -19,10 +141,10 @@
 		this.offsetY = 0;
 		this.offsetZ = 0;
 		
-		// Store for cached position data...
-		this.cachedPositionX = null;
-		this.cachedPositionY = null;
-		this.cachedPositionZ = null;
+		// Store for calculated position data...
+		this.calcPosX = 0;
+		this.calcPosY = 0;
+		this.calcPosZ = 0;
 		
 		// Storage for channel transformations
 		this.channelValues = {};
@@ -32,128 +154,7 @@
 		"constructor": Bone,  // Appear as a bivouac object
 		
 		"getPosition": function() {
-			var self = this;
-			
-			// Recursively calculate position
-			// If we have the ability, run this function on our parent
-			// to determine it's offset first.
-			
-			
-			// Check cache validity, scanning up tree toward root until
-			// root is reached, or a cache-invalidated node (Whatever comes first)
-			function checkCacheValidity() {
-				var bone = self;
-				
-				if (bone.endSite) {
-					return false;
-				}
-				
-				while(bone !== null) {
-					if (bone.cachedPositionX === null ||
-						bone.cachedPositionY === null ||
-						bone.cachedPositionZ === null) {
-						
-						// This ancestor bone had its cache invalidated.
-						// Our cache should be considered invalid too.
-						return false;
-					} else {
-						bone = bone.parent;
-					}
-				}
-				
-				return true;
-			}
-			
-			// Functions for running rotational transforms
-			function rotateX(point, angle) {
-		        var rad		= angle * Math.PI / 180,
-					cosa	= Math.cos(rad),
-					sina	= Math.sin(rad),
-					x, y, z;
-				
-		        y = point[1] * cosa - point[2] * sina
-		        z = point[1] * sina + point[2] * cosa
-		        return [point[0], y, z];
-			}
-			
-			function rotateY(point, angle) {
-		        var rad		= angle * Math.PI / 180,
-					cosa	= Math.cos(rad),
-					sina	= Math.sin(rad),
-					x, y, z;
-				
-		        z = point[2] * cosa - point[0] * sina
-		        x = point[2] * sina + point[0] * cosa
-		        return [x, point[1], z];
-			}
-			
-			function rotateZ(point, angle) {
-		        var rad		= angle * Math.PI / 180,
-					cosa	= Math.cos(rad),
-					sina	= Math.sin(rad),
-					x, y, z;
-				
-		        x = point[0] * cosa - point[1] * sina
-		        y = point[0] * sina + point[1] * cosa
-		        return [x, y, point[2]];
-			}
-			
-			if (!checkCacheValidity()) {
-				
-				if (!!this.parent) {
-					
-					var parentPosition = self.parent.getPosition();
-					var transformSubject = self.parent;
-					var eulerTransform = [
-							(transformSubject.channelValues["Xrotation"] || 0),
-							(transformSubject.channelValues["Yrotation"] || 0),
-							(transformSubject.channelValues["Zrotation"] || 0)];
-					
-					var tmpPosition = [self.offsetX, self.offsetY, self.offsetZ];
-					
-					["X","Y","Z"].forEach(function(d) {
-						if (!isNaN(self.channelValues[d + "rotation"])) {
-							var rFunction = d === "X" ? rotateX : d === "Y" ? rotateY : rotateZ;
-							tmpPosition = rFunction(tmpPosition,self.channelValues[d+"rotation"]);
-							
-							// self.cachedPositionX = rotation[0];
-							// 							self.cachedPositionY = rotation[1];
-							// 							self.cachedPositionZ = rotation[2];
-						}
-					});
-					
-					// Ignore rotational transform for now. It's going to be a hard one to work out.
-					// I'll stress about it once I've got just positional stuff working.
-					self.cachedPositionX = parentPosition[0] + tmpPosition[0] + (!isNaN(self.channelValues["Xposition"]) ? self.channelValues["Xposition"] : 0);
-					self.cachedPositionY = parentPosition[1] + tmpPosition[1] + (!isNaN(self.channelValues["Yposition"]) ? self.channelValues["Yposition"] : 0);
-					self.cachedPositionZ = parentPosition[2] + tmpPosition[2] + (!isNaN(self.channelValues["Zposition"]) ? self.channelValues["Zposition"] : 0);
-					
-					
-					
-				} else {
-					// Haven't found any good BVH documentation yet, so working this out as I go.
-					// I'm assuming the channel values for x/y/z position are relative to the offset and not exclusive.
-					// Because my test data has the root node offset at 0,0,0 I can't really test this. Feel free to
-					// correct me.
-					
-					// If we're the root node, we don't calculate rotation, since we're just a point.
-					// Any rotation applied to this node is initially calculated one level up.
-				
-					this.cachedPositionX = !isNaN(this.channelValues["Xposition"]) ?
-											this.offsetX + this.channelValues["Xposition"] : 
-											this.offsetX;
-				
-					this.cachedPositionY = !isNaN(this.channelValues["Yposition"]) ?
-											this.offsetY + this.channelValues["Yposition"] : 
-											this.offsetY;
-				
-					this.cachedPositionZ = !isNaN(this.channelValues["Xposition"]) ?
-											this.offsetX + this.channelValues["Xposition"] :
-											this.offsetX;
-				}
-			}
-			
-			return [this.cachedPositionX,this.cachedPositionY,this.cachedPositionZ];
+			return [this.calcPosX, this.calcPosY, this.calcPosZ];
 		},
 		
 		"setChannelValue": function(channelName,value) {
@@ -162,9 +163,9 @@
 					this.channelValues[channelName] = parseFloat(value);
 					
 					// Clear cache
-					this.cachedPositionX = null;
-					this.cachedPositionY = null;
-					this.cachedPositionZ = null;
+					this.calcPosX = null;
+					this.calcPosY = null;
+					this.calcPosZ = null;
 				}
 			} else {
 				throw new Error("Fatal Error: Unknown/disallowed channel type: " + token);
@@ -204,13 +205,10 @@
 					self.boneList[channel[0]].setChannelValue(channel[1],self.frames[frame][index]);
 				});
 				
-				// Loop through bones and calculate new position...
-				for (bone in self.boneList) {
-					if (self.boneList.hasOwnProperty(bone)) {
-						self.boneList[bone].getPosition();
-					}
-				}
+				// Kick off skeleton processing
+				self.skeleton.forEach(processBone);
 				
+				// Return processed skeleton
 				return self.skeleton;
 			} else {
 				throw new Error("Could not seek to frame. Missing frame or bad index.");

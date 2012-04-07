@@ -20,10 +20,11 @@
 		// Listening for mouse events
 		canvas.addEventListener("mousemove",function(eventData) {
 			var cX = canvas.width - eventData.clientX, cY = eventData.clientY;
-			crotY = 0.2 - (0.2 - (cX / canvas.width)*0.4)
-			crotX = 0.4 - (0.2 - (cY / canvas.height)*0.4)
-			crotZ = 0;
-			
+
+			crotX = (0 - (1-(cY / canvas.height)*1))
+			crotY = (0 - (1-(cX / canvas.width)*1))
+			crotZ = -0.2;
+					
 			camera.setRotation(crotX, crotY, crotZ);
 		});
 		
@@ -34,10 +35,7 @@
 			// Advance to frame
 			mocap.getForFrame(frame);
 			
-			context.fillStyle = "rgba(255,255,255,1)";
-			context.fillRect(0,0,width,height);
 			context.fillStyle = "black";
-			
 			context.fillRect(0,0,100,14);
 			context.fillStyle = "white";
 			context.fillText(frame,10,10);
@@ -55,12 +53,12 @@
 						context.strokeStyle = "black";
 					}
 					
-					context.fillRect.apply(context,projection.project(bone.cachedPositionX,bone.cachedPositionY,bone.cachedPositionZ).concat([3,3]));
+					context.fillRect.apply(context,projection.project(bone.calcPosX,bone.calcPosY,bone.calcPosZ).concat([3,3]));
 					
 					if (bone.parent) {
 						context.beginPath();
-						context.moveTo.apply(context,projection.project(bone.parent.cachedPositionX,bone.parent.cachedPositionY,bone.parent.cachedPositionZ));
-						context.lineTo.apply(context,projection.project(bone.cachedPositionX,bone.cachedPositionY,bone.cachedPositionZ));
+						context.moveTo.apply(context,projection.project(bone.parent.calcPosX,bone.parent.calcPosY,bone.parent.calcPosZ));
+						context.lineTo.apply(context,projection.project(bone.calcPosX,bone.calcPosY,bone.calcPosZ));
 						context.stroke();
 					}
 				}
@@ -72,14 +70,30 @@
 				frame = 0;
 			}
 						
-			window.setTimeout(function() {
-				renderMocap(mocap);
-			}, mocap.frameTime*2);
+			
 		}
 		
-		loadBVH("kashiyuka",renderMocap);
-		// loadBVH("aachan",renderMocap);
-		// 		loadBVH("nocchi",renderMocap);
+		loadBVH("kashiyuka",function(kashiyuka) {
+			loadBVH("aachan",function(aachan) {
+				loadBVH("nocchi",function(nocchi) {
+					function renderMocapGroup() {
+						context.fillStyle = "rgba(255,255,255,1)";
+						context.fillRect(0,0,width,height);
+						context.fillStyle = "black";
+						
+						renderMocap(kashiyuka);
+						renderMocap(aachan);
+						renderMocap(nocchi);
+						
+						window.setTimeout(function() {
+							renderMocapGroup();
+						}, nocchi.frameTime*2);
+					}
+					
+					renderMocapGroup();
+				});
+			});
+		});
 	},false);
 	
 	function loadBVH(name,callback) {
