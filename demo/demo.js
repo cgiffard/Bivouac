@@ -12,18 +12,22 @@
 			canvas.width = width;
 			document.body.appendChild(canvas);
 		
+		// Style document to avoid scrolling and stuff...
+		document.body.style.margin = "0px";
+		document.body.style.overflow = "hidden";
+		
 		var context = canvas.getContext("2d");
 		
-		var camera		= new perspex.Camera(-600,-600,-800,-0.4,0,-0.2,height,width,-1000),
+		var camera		= new perspex.Camera(0,-1*(height/2),-900,0,-0.4,0,800,800,-1000),
 			projection	= perspex(camera,{ clamp: false });
 			
 		// Listening for mouse events
 		canvas.addEventListener("mousemove",function(eventData) {
 			var cX = canvas.width - eventData.clientX, cY = eventData.clientY;
 
-			crotX = (0 - (1-(cY / canvas.height)*1))
-			crotY = (0 - (1-(cX / canvas.width)*1))
-			crotZ = -0.2;
+			crotX = 0;
+			crotY = (0.5 - (1-(cX / canvas.width)*1))
+			crotZ = 0;
 					
 			camera.setRotation(crotX, crotY, crotZ);
 		});
@@ -53,14 +57,38 @@
 						context.strokeStyle = "black";
 					}
 					
-					context.fillRect.apply(context,projection.project(bone.calcPosX,bone.calcPosY,bone.calcPosZ).concat([3,3]));
-					
 					if (bone.parent) {
 						context.beginPath();
 						context.moveTo.apply(context,projection.project(bone.parent.calcPosX,bone.parent.calcPosY,bone.parent.calcPosZ));
 						context.lineTo.apply(context,projection.project(bone.calcPosX,bone.calcPosY,bone.calcPosZ));
 						context.stroke();
+					} else {
+						// we're the root element.
+						// Draw a line from our root to the floor to enhance visibility.
+						
+						context.strokeStyle = "grey";
+						context.beginPath();
+						context.moveTo.apply(context,projection.project(bone.calcPosX,bone.calcPosY,bone.calcPosZ));
+						context.lineTo.apply(context,projection.project(bone.calcPosX,0,bone.calcPosZ));
+						context.stroke();
+						
+						context.lineWidth = 1;
+						context.lineTo.apply(context,projection.project(0,0,0));
+						context.stroke();
+						context.lineWidth = 5;
+						
+						context.fillStyle = "rgba(0,0,0,0.1)";
+						context.beginPath();
+						context.moveTo.apply(context,projection.project(bone.calcPosX-30,0,bone.calcPosZ-30));
+						context.lineTo.apply(context,projection.project(bone.calcPosX-30,0,bone.calcPosZ+30));
+						context.lineTo.apply(context,projection.project(bone.calcPosX+30,0,bone.calcPosZ+30));
+						context.lineTo.apply(context,projection.project(bone.calcPosX+30,0,bone.calcPosZ-30));
+						context.closePath();
+						context.fill();
 					}
+					
+					context.fillStyle = "gold";
+					context.fillRect.apply(context,projection.project(bone.calcPosX,bone.calcPosY,bone.calcPosZ).concat([5,5]));
 				}
 			}
 			
@@ -69,18 +97,36 @@
 			} else {
 				frame = 0;
 			}
-						
-			
 		}
 		
 		loadBVH("kashiyuka",function(kashiyuka) {
 			loadBVH("aachan",function(aachan) {
 				loadBVH("nocchi",function(nocchi) {
 					function renderMocapGroup() {
-						context.fillStyle = "rgba(255,255,255,1)";
+						context.fillStyle = "rgba(255,255,255,0.5)";
 						context.fillRect(0,0,width,height);
 						context.fillStyle = "black";
 						
+						context.lineWidth = 1;
+						context.beginPath();
+						context.moveTo.apply(context,projection.project(0,0,0));
+						context.lineTo.apply(context,projection.project(0,0,300));
+						context.strokeStyle = "lime";
+						context.stroke();
+			
+						context.beginPath();
+						context.moveTo.apply(context,projection.project(0,0,0));
+						context.lineTo.apply(context,projection.project(0,300,0));
+						context.strokeStyle = "blue";
+						context.stroke();
+			
+						context.beginPath();
+						context.moveTo.apply(context,projection.project(0,0,0));
+						context.lineTo.apply(context,projection.project(300,0,0));
+						context.strokeStyle = "red";
+						context.stroke();
+						
+						context.lineWidth = 5;
 						renderMocap(kashiyuka);
 						renderMocap(aachan);
 						renderMocap(nocchi);

@@ -13,9 +13,9 @@
 			cosa	= Math.cos(rad),
 			sina	= Math.sin(rad),
 			x, y, z;
-								
-	    y = point[1] * cosa - point[2] * sina
-	    z = point[1] * sina + point[2] * cosa
+		
+	    y = point[1] * cosa - point[2] * sina;
+	    z = point[1] * sina + point[2] * cosa;
 	    return [point[0], y, z];
 	}
 							
@@ -24,9 +24,9 @@
 			cosa	= Math.cos(rad),
 			sina	= Math.sin(rad),
 			x, y, z;
-								
-	    z = point[2] * cosa - point[0] * sina
-	    x = point[2] * sina + point[0] * cosa
+		
+	    z = point[2] * cosa - point[0] * sina;
+	    x = point[2] * sina + point[0] * cosa;
 	    return [x, point[1], z];
 	}
 							
@@ -35,9 +35,9 @@
 			cosa	= Math.cos(rad),
 			sina	= Math.sin(rad),
 			x, y, z;
-								
-	    x = point[0] * cosa - point[1] * sina
-	    y = point[0] * sina + point[1] * cosa
+		
+	    x = point[0] * cosa - point[1] * sina;
+	    y = point[0] * sina + point[1] * cosa;
 	    return [x, y, point[2]];
 	}
 	
@@ -61,18 +61,11 @@
 			];
 			
 			// Run through a list of our collected transformations for this bone...
-			transformationList.forEach(function(transformation) {
-				// Relative position based on the rotation origin
-				var relativePosition = [
-					tmpPosition[0],
-					tmpPosition[1],
-					tmpPosition[2]
-				];
-				
-				["X","Y","Z"].forEach(function(d,i) {
+			transformationList.forEach(function(transformation,index) {
+				["Y","X","Z"].forEach(function(d,i) {
 					if (!!transformation.rotation[i]) {
 						var rFunction = d === "X" ? rotateX : d === "Y" ? rotateY : rotateZ;
-						tmpPosition = rFunction(relativePosition,transformation.rotation[i]);
+						tmpPosition = rFunction(tmpPosition,transformation.rotation[i]);
 					}
 				});
 			});
@@ -112,8 +105,8 @@
 		// Save any transformations in the transformation stack...
 		transformationList.push({
 			"rotation":[
-				(bone.channelValues["Xrotation"] || 0),
 				(bone.channelValues["Yrotation"] || 0),
+				(bone.channelValues["Xrotation"] || 0),
 				(bone.channelValues["Zrotation"] || 0)
 			],
 			"origin": tmpPosition
