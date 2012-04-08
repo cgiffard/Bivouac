@@ -1,6 +1,8 @@
 // Bivouac and perspex demo
 // Christopher Giffard 2012
 
+// Kinda chunky at the moment. Please don't look too hard at the maths.
+
 (function() {
 	
 	window.addEventListener("load",function() {
@@ -18,19 +20,32 @@
 		
 		var context = canvas.getContext("2d");
 		
-		var camera		= new perspex.Camera(0,-1*(height/2),window.innerWidth*-1,0,-0.4,0,window.innerWidth,window.innerHeight,-1500),
-			projection	= perspex(camera,{ clamp: false });
+		// Add a message about the loading + music...
+		context.fillText("Loading...",Math.floor(width/2),Math.floor(height/2));
+		context.fillText("WARNING: There is music.",Math.floor(width/2),Math.floor(height/2)+20);
+		
+		// Camera settings...
+		var viewWidth = 1064, //width,
+			viewHeight = 690, //height,
+			viewDistance = -100,
+			cameraX = -500,
+			cameraY = -600,
+			cameraZ = -1500,
+			cameraRotZ = 0,
+			cameraRotY = -0.1,
+			cameraRotX = -0.2;
 			
-		// Listening for mouse events
-		canvas.addEventListener("mousemove",function(eventData) {
-			var cX = canvas.width - eventData.clientX, cY = eventData.clientY;
-
-			crotX = 0;
-			crotY = (0.5 - (2-(cX / canvas.width)*2))
-			crotZ = 0;
-					
-			camera.setRotation(crotX, crotY, crotZ);
-		});
+		// Calculate the camera distance from the 0,0 point in the XZ plane
+		var xzDistance = Math.sqrt(Math.pow(Math.abs(cameraZ),2) + Math.pow(Math.abs(cameraX),2));
+		
+		// Now we can calculate the vertical diagonal distance in 3D.
+		var vDistance = Math.sqrt(Math.pow(Math.abs(cameraY),2) + Math.pow(xzDistance,2));
+		
+		// Calculate the X rotation of the camera
+		// cameraRotZ = 1 - Math.tan(xzDistance);
+		
+		var camera		= new perspex.Camera(cameraX,cameraY,cameraZ,cameraRotX,cameraRotY,cameraRotZ,viewWidth,viewHeight,viewDistance),
+			projection	= perspex(camera,{ clamp: false });
 		
 		// Create audio...
 		var music = document.createElement("audio");
@@ -41,6 +56,9 @@
 		
 		var frame = 1;
 		var cumulativeRenderTime = 0;
+		var cameraAngle = 0;
+		var cameraOrbitRadius = 1000;
+		var orbitSpeed = 0.3;
 		
 		loadBVH("kashiyuka",function(kashiyuka) {
 			loadBVH("aachan",function(aachan) {
@@ -49,6 +67,22 @@
 					
 					function renderMocapGroup() {
 						var renderStart = (new Date()).getTime();
+						
+						// Camera rotation
+						cameraAngle = cameraAngle < 360 ? cameraAngle + orbitSpeed : cameraAngle = 0;
+						cameraX = (Math.sin(cameraAngle * (Math.PI/180)) * cameraOrbitRadius);
+						cameraZ = (Math.cos(cameraAngle * (Math.PI/180)) * cameraOrbitRadius);
+						cameraRotY = ((cameraAngle-250) * (Math.PI/180));
+						
+						camera.setPosition(cameraX,cameraY,cameraZ);
+						camera.setRotation(cameraRotX,cameraRotY,cameraRotZ);
+																	
+						if (viewDistance > -1400) {
+							var tweenOut = (1400 - Math.abs(viewDistance)) / 2;
+							tweenOut = 1 < tweenOut ? 1 : tweenOut;
+							viewDistance -= tweenOut
+							camera.setViewOffset(viewWidth,viewHeight,viewDistance);
+						}
 						
 						if (frame === 1) {
 							cumulativeRenderTime = 0;
@@ -154,7 +188,7 @@
 						if (frame < nocchi.frames.length -1) {
 							frame ++;
 						} else {
-							frame = 0;
+							frame = 1;
 						}
 						
 						var nextFrameTimeout = nocchi.frameTime - renderTime;
@@ -162,13 +196,13 @@
 						if (nextFrameTimeout < 0) {
 							// Skip some frames to catch up!
 							var frameSkip = Math.ceil(renderTime / nocchi.frameTime) - 1;
-							frame += frameSkip;
+							frame = frame + frameSkip > nocchi.frames.length ? 1 : frame + frameSkip;
 							
 							// And how much time is left until the next frame?
 							nextFrameTimeout = renderTime % nocchi.frameTime;
 							
-							console.log("Skipped %d frames, (due to excessive rendering time of %dms) timeout to next frame in %dms.",frameSkip,renderTime,nextFrameTimeout);
-							console.log(cumulativeRenderTime/frame);
+							// console.log("Skipped %d frames, (due to excessive rendering time of %dms) timeout to next frame in %dms.",frameSkip,renderTime,nextFrameTimeout);
+							// console.log(cumulativeRenderTime/frame);
 						}
 						
 						window.setTimeout(function() {
