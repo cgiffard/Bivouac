@@ -63,12 +63,12 @@
 			// Run through a list of our collected transformations for this bone...
 			cumulativeRotationValues = [0,0,0];
 			transformationList.reverse().forEach(function(transformation,index) {
-				["X","Y","Z"].forEach(function(d,i) {
+				["Z","X","Y"].forEach(function(d,i) {
 					cumulativeRotationValues[i] += transformation.rotation[i];
 				});
 			});
 			
-			["X","Y","Z"].forEach(function(d,i) {
+			["Z","X","Y"].forEach(function(d,i) {
 					
 				// if (!!transformation.rotation[i]) {
 					var rFunction = d === "X" ? rotateX : d === "Y" ? rotateY : rotateZ;
@@ -113,9 +113,9 @@
 		// Save any transformations in the transformation stack...
 		transformationList.push({
 			"rotation":[
+				(bone.channelValues["Zrotation"] || 0),
 				(bone.channelValues["Xrotation"] || 0),
-				(bone.channelValues["Yrotation"] || 0),
-				(bone.channelValues["Zrotation"] || 0)
+				(bone.channelValues["Yrotation"] || 0)
 			],
 			"origin": tmpPosition
 		});
