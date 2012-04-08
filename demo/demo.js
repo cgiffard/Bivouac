@@ -59,15 +59,12 @@
 							music.play();
 						}
 						
-						
-						
 						if (frame % 18 === 0) {
-							console.log("crazy colours!");
 							crazyHue = Math.random()*360;
 						}
 						
 						// canvas.width = canvas.width;
-						context.fillStyle = "hsla(" + crazyHue + ",100%,80%,0.5)";
+						context.fillStyle = "hsla(" + crazyHue + ",100%,80%,0.3)";
 						context.fillRect(0,0,width,height);
 						context.fillStyle = "black";
 							
@@ -189,6 +186,13 @@
 					
 					context.fillStyle = "gold";
 					context.fillRect.apply(context,projection.project(bone.calcPosX,bone.calcPosY,bone.calcPosZ).concat([5,5]));
+					
+					var jointPos = projection.project(bone.calcPosX,bone.calcPosY,bone.calcPosZ);
+					context.fillStyle = "black";
+					
+					if (!bone.parent) {
+						context.fillText(Math.round(bone.channelValues["Xrotation"]||0) + " x " + Math.round(bone.channelValues["Yrotation"]||0) + " x " + Math.round(bone.channelValues["Zrotation"]||0),jointPos[0]+20,jointPos[1]);
+					}
 				}
 			}
 		}
