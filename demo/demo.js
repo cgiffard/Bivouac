@@ -29,7 +29,7 @@
 			viewHeight = 690, //height,
 			viewDistance = -100,
 			cameraX = -500,
-			cameraY = -600,
+			cameraY = 400,
 			cameraZ = -1500,
 			cameraRotZ = 0,
 			cameraRotY = -0.1,
@@ -63,7 +63,7 @@
 		loadBVH("kashiyuka",function(kashiyuka) {
 			loadBVH("aachan",function(aachan) {
 				loadBVH("nocchi",function(nocchi) {
-					var crazyHue = Math.random()*360;
+					var crazyHue = Math.random()*360, tweenOut;
 					
 					function renderMocapGroup() {
 						var renderStart = (new Date()).getTime();
@@ -73,6 +73,12 @@
 						cameraX = (Math.sin(cameraAngle * (Math.PI/180)) * cameraOrbitRadius);
 						cameraZ = (Math.cos(cameraAngle * (Math.PI/180)) * cameraOrbitRadius);
 						cameraRotY = ((cameraAngle-250) * (Math.PI/180));
+						
+						if (cameraY > -600) {
+							tweenOut = (600 - Math.abs(cameraY)) / 5;
+							tweenOut = 5 < tweenOut ? 5 : tweenOut;
+							cameraY -= tweenOut;
+						}
 						
 						camera.setPosition(cameraX,cameraY,cameraZ);
 						camera.setRotation(cameraRotX,cameraRotY,cameraRotZ);
@@ -210,7 +216,11 @@
 						}, nextFrameTimeout);
 					}
 					
-					renderMocapGroup();
+					music.addEventListener("loadeddata",function() {
+						if (music.readyState > 2) {
+							renderMocapGroup();
+						}
+					});
 				});
 			});
 		});
