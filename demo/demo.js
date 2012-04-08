@@ -32,18 +32,118 @@
 			camera.setRotation(crotX, crotY, crotZ);
 		});
 		
+		// Create audio...
+		var music = document.createElement("audio");
+			music.src = "http://dl.dropbox.com/u/23733308/Perfume_globalsite_sound.wav";
+			music.controls = false;
+			document.body.appendChild(music);
+			music.load();
+		
+		var frame = 1;
+		var cumulativeRenderTime = 0;
+		
+		loadBVH("kashiyuka",function(kashiyuka) {
+			loadBVH("aachan",function(aachan) {
+				loadBVH("nocchi",function(nocchi) {
+					var crazyHue = Math.random()*360;
+					
+					function renderMocapGroup() {
+						var renderStart = (new Date()).getTime();
+						
+						if (frame === 1) {
+							cumulativeRenderTime = 0;
+						}
+						
+						if (frame === 1 && music.readyState > 1) {
+							music.currentTime = 0;
+							music.play();
+						}
+						
+						
+						
+						if (frame % 18 === 0) {
+							console.log("crazy colours!");
+							crazyHue = Math.random()*360;
+						}
+						
+						// canvas.width = canvas.width;
+						context.fillStyle = "hsla(" + crazyHue + ",100%,80%,0.5)";
+						context.fillRect(0,0,width,height);
+						context.fillStyle = "black";
+							
+						context.lineWidth = 1;
+						context.beginPath();
+						context.moveTo.apply(context,projection.project(0,0,0));
+						context.lineTo.apply(context,projection.project(0,0,300));
+						context.strokeStyle = "lime";
+						context.stroke();
+							
+						context.beginPath();
+						context.moveTo.apply(context,projection.project(0,0,0));
+						context.lineTo.apply(context,projection.project(0,300,0));
+						context.strokeStyle = "blue";
+						context.stroke();
+							
+						context.beginPath();
+						context.moveTo.apply(context,projection.project(0,0,0));
+						context.lineTo.apply(context,projection.project(300,0,0));
+						context.strokeStyle = "red";
+						context.stroke();
+							
+						context.lineWidth = 5;
+						renderMocap(kashiyuka);
+						renderMocap(aachan);
+						renderMocap(nocchi);
+						
+						context.fillStyle = "black";
+						context.fillRect(0,0,100,14);
+						context.fillStyle = "white";
+						context.fillText(frame,10,10);
+						context.fillStyle = "black";
+						
+						var renderTime = (new Date()).getTime() - renderStart;
+						cumulativeRenderTime += renderTime;
+						
+						context.fillStyle = "black";
+						context.fillRect(110,0,100,14);
+						context.fillStyle = "white";
+						context.fillText(renderTime,120,10);
+						context.fillStyle = "black";
+						
+						if (frame < nocchi.frames.length -1) {
+							frame ++;
+						} else {
+							frame = 0;
+						}
+						
+						var nextFrameTimeout = nocchi.frameTime - renderTime;
+						
+						if (nextFrameTimeout < 0) {
+							// Skip some frames to catch up!
+							var frameSkip = Math.ceil(renderTime / nocchi.frameTime) - 1;
+							frame += frameSkip;
+							
+							// And how much time is left until the next frame?
+							nextFrameTimeout = renderTime % nocchi.frameTime;
+							
+							console.log("Skipped %d frames, (due to excessive rendering time of %dms) timeout to next frame in %dms.",frameSkip,renderTime,nextFrameTimeout);
+							console.log(cumulativeRenderTime/frame);
+						}
+						
+						window.setTimeout(function() {
+							renderMocapGroup();
+						}, nextFrameTimeout);
+					}
+					
+					renderMocapGroup();
+				});
+			});
+		});
 		
 		// Mocap render function
-		var frame = 10;
 		function renderMocap(mocap) {
 			// Advance to frame
 			mocap.getForFrame(frame);
-			
-			context.fillStyle = "black";
-			context.fillRect(0,0,100,14);
-			context.fillStyle = "white";
-			context.fillText(frame,10,10);
-			context.fillStyle = "black";
 			
 			for (var bone in mocap.boneList) {
 				if (mocap.boneList.hasOwnProperty(bone)) {
@@ -91,55 +191,7 @@
 					context.fillRect.apply(context,projection.project(bone.calcPosX,bone.calcPosY,bone.calcPosZ).concat([5,5]));
 				}
 			}
-			
-			if (frame < mocap.frames.length -1) {
-				frame ++;
-			} else {
-				frame = 0;
-			}
 		}
-		
-		loadBVH("kashiyuka",function(kashiyuka) {
-			loadBVH("aachan",function(aachan) {
-				loadBVH("nocchi",function(nocchi) {
-					function renderMocapGroup() {
-						context.fillStyle = "rgba(255,255,255,0.5)";
-						context.fillRect(0,0,width,height);
-						context.fillStyle = "black";
-						
-						context.lineWidth = 1;
-						context.beginPath();
-						context.moveTo.apply(context,projection.project(0,0,0));
-						context.lineTo.apply(context,projection.project(0,0,300));
-						context.strokeStyle = "lime";
-						context.stroke();
-			
-						context.beginPath();
-						context.moveTo.apply(context,projection.project(0,0,0));
-						context.lineTo.apply(context,projection.project(0,300,0));
-						context.strokeStyle = "blue";
-						context.stroke();
-			
-						context.beginPath();
-						context.moveTo.apply(context,projection.project(0,0,0));
-						context.lineTo.apply(context,projection.project(300,0,0));
-						context.strokeStyle = "red";
-						context.stroke();
-						
-						context.lineWidth = 5;
-						renderMocap(kashiyuka);
-						renderMocap(aachan);
-						renderMocap(nocchi);
-						
-						window.setTimeout(function() {
-							renderMocapGroup();
-						}, nocchi.frameTime*2);
-					}
-					
-					renderMocapGroup();
-				});
-			});
-		});
 	},false);
 	
 	function loadBVH(name,callback) {
