@@ -43,6 +43,7 @@
 	
 	// Function for recursing through skeleton and processing bone position/rotation
 	function processBone(bone,transformationList) {
+		// This function probably needs a bit of a cleanup.
 		
 		// Because rotational transformations are cumulative, we need somewhere to store them as we recurse through
 		transformationList = transformationList || [];
@@ -54,6 +55,7 @@
 			var parentPosition = bone.parent.getPosition();
 			var transformSubject = bone.parent;
 			
+			// Create our vector
 			tmpPosition = [
 				bone.offsetX,
 				bone.offsetY,
@@ -69,14 +71,9 @@
 			});
 			
 			["Z","X","Y"].forEach(function(d,i) {
-					
-				// if (!!transformation.rotation[i]) {
-					var rFunction = d === "X" ? rotateX : d === "Y" ? rotateY : rotateZ;
-					tmpPosition = rFunction(tmpPosition,cumulativeRotationValues[i]);
-				// }
-					
+				var rFunction = d === "X" ? rotateX : d === "Y" ? rotateY : rotateZ;
+				tmpPosition = rFunction(tmpPosition,cumulativeRotationValues[i]);
 			});
-			
 			
 			// Now we set our position relative to that of our direct parent.
 			tmpPosition[0] = parentPosition[0] + tmpPosition[0] + (!isNaN(bone.channelValues["Xposition"]) ? bone.channelValues["Xposition"] : 0);
@@ -224,7 +221,6 @@
 		
 		"parse": function(data) {
 			var self = this;
-			var startTime = (new Date()).getTime();
 			
 			var tokens =
 				data
@@ -448,7 +444,6 @@
 			});
 			
 			this.skeleton = hierarchy;
-			console.log("it took ",((new Date()).getTime()-startTime),"ms to parse.");
 		}
 	};
 	

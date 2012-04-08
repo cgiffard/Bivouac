@@ -18,7 +18,7 @@
 		
 		var context = canvas.getContext("2d");
 		
-		var camera		= new perspex.Camera(0,-1*(height/2),-900,0,-0.4,0,800,800,-1000),
+		var camera		= new perspex.Camera(0,-1*(height/2),window.innerWidth*-1,0,-0.4,0,window.innerWidth,window.innerHeight,-1500),
 			projection	= perspex(camera,{ clamp: false });
 			
 		// Listening for mouse events
@@ -26,7 +26,7 @@
 			var cX = canvas.width - eventData.clientX, cY = eventData.clientY;
 
 			crotX = 0;
-			crotY = (0.5 - (1-(cX / canvas.width)*1))
+			crotY = (0.5 - (2-(cX / canvas.width)*2))
 			crotZ = 0;
 					
 			camera.setRotation(crotX, crotY, crotZ);
@@ -63,12 +63,49 @@
 							crazyHue = Math.random()*360;
 						}
 						
-						// canvas.width = canvas.width;
-						context.fillStyle = "hsla(" + crazyHue + ",100%,80%,0.3)";
+						context.fillStyle = "hsla(" + crazyHue + ",100%,80%,1)";
 						context.fillRect(0,0,width,height);
 						context.fillStyle = "black";
-							
-						context.lineWidth = 1;
+						
+						// checkerboard
+						var checkWidth = 100;
+						for (var x = -1000; x <=1000; x += checkWidth) {
+							for (var z = -1000; z <=1000; z += checkWidth) {
+								
+								if ((z - x) % (checkWidth * 2)) {
+									
+									var firstCorner = projection.project(x,0,z),
+										lastCorner = projection.project(x+checkWidth,0,z+checkWidth),
+										midCorner1 = projection.project(x+checkWidth,0,z),
+										midCorner2 = projection.project(x,0,z+checkWidth);
+									
+									if (!(firstCorner[0] < 0	|| firstCorner[0] > width	|| firstCorner[1] < 0 	| firstCorner[1] > height) ||
+										!(lastCorner[0] < 0		|| lastCorner[0] > width	|| lastCorner[1] < 0	|| lastCorner[1] > height) ||
+										!(midCorner1[0] < 0		|| midCorner1[0] > width	|| midCorner1[1] < 0	|| midCorner1[1] > height) ||
+										!(midCorner2[0] < 0		|| midCorner2[0] > width	|| midCorner2[1] < 0	|| midCorner2[1] > height)) {
+										
+										// var alphaVariation = 0.5-Math.atan((Math.abs(z) + Math.abs(x))/2000);
+										
+										var alphaVariation = 1 - (Math.sqrt(Math.pow(Math.abs(z),2) + Math.pow(Math.abs(x),2)) / 1000);
+										
+										context.fillStyle = "rgba(255,255,255," + alphaVariation + ")";
+									
+										context.lineWidth = 1;
+										context.beginPath();
+										context.moveTo.apply(context,projection.project(x,0,z));
+										context.lineTo.apply(context,projection.project(x+checkWidth,0,z));
+										context.lineTo.apply(context,projection.project(x+checkWidth,0,z+checkWidth));
+										context.lineTo.apply(context,projection.project(x,0,z+checkWidth));
+										context.lineTo.apply(context,projection.project(x,0,z));
+										context.closePath();
+										context.fill();
+									}
+								}
+							}
+						}
+						
+						
+						context.lineWidth = 3;
 						context.beginPath();
 						context.moveTo.apply(context,projection.project(0,0,0));
 						context.lineTo.apply(context,projection.project(0,0,300));
@@ -86,7 +123,7 @@
 						context.lineTo.apply(context,projection.project(300,0,0));
 						context.strokeStyle = "red";
 						context.stroke();
-							
+						
 						context.lineWidth = 5;
 						renderMocap(kashiyuka);
 						renderMocap(aachan);
@@ -106,6 +143,13 @@
 						context.fillStyle = "white";
 						context.fillText(renderTime,120,10);
 						context.fillStyle = "black";
+						
+						context.fillStyle = "black";
+						context.fillRect(220,0,100,14);
+						context.fillStyle = "white";
+						context.fillText(Math.round(cumulativeRenderTime/frame,2),230,10);
+						context.fillStyle = "black";
+						
 						
 						if (frame < nocchi.frames.length -1) {
 							frame ++;
@@ -159,7 +203,10 @@
 						context.moveTo.apply(context,projection.project(bone.parent.calcPosX,bone.parent.calcPosY,bone.parent.calcPosZ));
 						context.lineTo.apply(context,projection.project(bone.calcPosX,bone.calcPosY,bone.calcPosZ));
 						context.stroke();
-					} else {
+						
+					}
+					
+					if (bone.endSite && bone.name.match(/toe/i)) {
 						// we're the root element.
 						// Draw a line from our root to the floor to enhance visibility.
 						
@@ -188,10 +235,12 @@
 					context.fillRect.apply(context,projection.project(bone.calcPosX,bone.calcPosY,bone.calcPosZ).concat([5,5]));
 					
 					var jointPos = projection.project(bone.calcPosX,bone.calcPosY,bone.calcPosZ);
-					context.fillStyle = "black";
+					context.fillStyle = "rgba(0,0,0,0.3)";
 					
-					if (!bone.parent) {
-						context.fillText(Math.round(bone.channelValues["Xrotation"]||0) + " x " + Math.round(bone.channelValues["Yrotation"]||0) + " x " + Math.round(bone.channelValues["Zrotation"]||0),jointPos[0]+20,jointPos[1]);
+					if (bone.endSite || 1) {
+						context.fillText(bone.name,jointPos[0]+20,jointPos[1]);
+						
+						// context.fillText(Math.round(bone.channelValues["Xrotation"]||0) + " x " + Math.round(bone.channelValues["Yrotation"]||0) + " x " + Math.round(bone.channelValues["Zrotation"]||0),jointPos[0]+20,jointPos[1]);
 					}
 				}
 			}
