@@ -23,6 +23,7 @@
 		// Add a message about the loading + music...
 		context.fillText("Loading...",Math.floor(width/2),Math.floor(height/2));
 		context.fillText("WARNING: There is music.",Math.floor(width/2),Math.floor(height/2)+20);
+		context.fillText("There are also a few display bugs. Work in progress!",Math.floor(width/2),Math.floor(height/2)+40);
 		
 		// Camera settings...
 		var viewWidth = 1064, //width,
