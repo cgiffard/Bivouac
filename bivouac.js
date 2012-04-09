@@ -46,7 +46,7 @@
 		// This function probably needs a bit of a cleanup.
 		
 		// Because rotational transformations are cumulative, we need somewhere to store them as we recurse through
-		transformationList = transformationList || [];
+		transformationList = transformationList && transformationList instanceof Array ? transformationList : [];
 		
 		// Storage for positional data
 		var tmpPosition = [0,0,0];
@@ -63,22 +63,28 @@
 			];
 			
 			// Run through a list of our collected transformations for this bone...
-			cumulativeRotationValues = [0,0,0];
-			transformationList.reverse().forEach(function(transformation,index) {
+			transformationList.forEach(function(transformation,index) {
+				var transformOrigin = [
+					tmpPosition[0] - transformation.origin[0],
+					tmpPosition[1] - transformation.origin[1],
+					tmpPosition[2] - transformation.origin[2]
+				];
+				
+				var scaleFactors = [
+					
+				];
+				
 				["Z","X","Y"].forEach(function(d,i) {
-					cumulativeRotationValues[i] += transformation.rotation[i];
+					var rFunction = d === "X" ? rotateX : d === "Y" ? rotateY : rotateZ;
+					
+					tmpPosition = rFunction(transformOrigin,transformation.rotation[i]);
 				});
 			});
 			
-			["Z","X","Y"].forEach(function(d,i) {
-				var rFunction = d === "X" ? rotateX : d === "Y" ? rotateY : rotateZ;
-				tmpPosition = rFunction(tmpPosition,cumulativeRotationValues[i]);
-			});
-			
-			// Now we set our position relative to that of our direct parent.
-			tmpPosition[0] = tmpPosition[0] + (!isNaN(bone.channelValues["Xposition"]) ? bone.channelValues["Xposition"] : 0);
-			tmpPosition[1] = tmpPosition[1] + (!isNaN(bone.channelValues["Yposition"]) ? bone.channelValues["Yposition"] : 0);
-			tmpPosition[2] = tmpPosition[2] + (!isNaN(bone.channelValues["Zposition"]) ? bone.channelValues["Zposition"] : 0);
+			// // Now we set our position relative to that of our direct parent.
+			// 			tmpPosition[0] = tmpPosition[0] + (!isNaN(bone.channelValues["Xposition"]) ? bone.channelValues["Xposition"] : 0);
+			// 			tmpPosition[1] = tmpPosition[1] + (!isNaN(bone.channelValues["Yposition"]) ? bone.channelValues["Yposition"] : 0);
+			// 			tmpPosition[2] = tmpPosition[2] + (!isNaN(bone.channelValues["Zposition"]) ? bone.channelValues["Zposition"] : 0);
 			
 		} else {
 			// Haven't found any good BVH documentation yet, so working this out as I go.
@@ -90,15 +96,15 @@
 			// Any rotation applied to this node is initially calculated one level up.
 			
 			tmpPosition[0] = !isNaN(bone.channelValues["Xposition"]) ?
-									bone.offsetX + bone.channelValues["Xposition"] : 
+									bone.offsetX + parseFloat(bone.channelValues["Xposition"]) : 
 									bone.offsetX;
 			
 			tmpPosition[1] = !isNaN(bone.channelValues["Yposition"]) ?
-									bone.offsetY + bone.channelValues["Yposition"] : 
+									bone.offsetY + parseFloat(bone.channelValues["Yposition"]) : 
 									bone.offsetY;
 			
 			tmpPosition[2] = !isNaN(bone.channelValues["Zposition"]) ?
-									bone.offsetZ + bone.channelValues["Zposition"] :
+									bone.offsetZ + parseFloat(bone.channelValues["Zposition"]) :
 									bone.offsetZ;
 		}
 		
@@ -114,7 +120,7 @@
 				(bone.channelValues["Xrotation"] || 0),
 				(bone.channelValues["Yrotation"] || 0)
 			],
-			"origin": tmpPosition
+			"origin": tmpPosition.slice(0)
 		});
 		
 		// Now process all our children

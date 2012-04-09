@@ -24,9 +24,9 @@
 		// Camera settings...
 		var viewWidth = 1064, //width,
 			viewHeight = 690, //height,
-			viewDistance = -100,
+			viewDistance = -1400,//100
 			cameraX = -500,
-			cameraY = 400,
+			cameraY = -600,//400
 			cameraZ = -1500,
 			cameraRotZ = 0,
 			cameraRotY = -0.1,
@@ -208,7 +208,7 @@
 						
 						window.setTimeout(function() {
 							renderMocapGroup();
-						}, nextFrameTimeout*5);
+						}, nextFrameTimeout);
 					}
 					
 					// music.addEventListener("loadeddata",function() {
