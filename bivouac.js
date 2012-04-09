@@ -57,9 +57,9 @@
 			
 			// Create our vector
 			tmpPosition = [
-				bone.offsetX,
-				bone.offsetY,
-				bone.offsetZ
+				bone.offsetX + parentPosition[0],
+				bone.offsetY + parentPosition[1],
+				bone.offsetZ + parentPosition[2]
 			];
 			
 			// Run through a list of our collected transformations for this bone...
@@ -76,9 +76,9 @@
 			});
 			
 			// Now we set our position relative to that of our direct parent.
-			tmpPosition[0] = parentPosition[0] + tmpPosition[0] + (!isNaN(bone.channelValues["Xposition"]) ? bone.channelValues["Xposition"] : 0);
-			tmpPosition[1] = parentPosition[1] + tmpPosition[1] + (!isNaN(bone.channelValues["Yposition"]) ? bone.channelValues["Yposition"] : 0);
-			tmpPosition[2] = parentPosition[2] + tmpPosition[2] + (!isNaN(bone.channelValues["Zposition"]) ? bone.channelValues["Zposition"] : 0);
+			tmpPosition[0] = tmpPosition[0] + (!isNaN(bone.channelValues["Xposition"]) ? bone.channelValues["Xposition"] : 0);
+			tmpPosition[1] = tmpPosition[1] + (!isNaN(bone.channelValues["Yposition"]) ? bone.channelValues["Yposition"] : 0);
+			tmpPosition[2] = tmpPosition[2] + (!isNaN(bone.channelValues["Zposition"]) ? bone.channelValues["Zposition"] : 0);
 			
 		} else {
 			// Haven't found any good BVH documentation yet, so working this out as I go.

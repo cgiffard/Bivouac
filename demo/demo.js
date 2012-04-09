@@ -14,10 +14,6 @@
 			canvas.width = width;
 			document.body.appendChild(canvas);
 		
-		// Style document to avoid scrolling and stuff...
-		document.body.style.margin = "0px";
-		document.body.style.overflow = "hidden";
-		
 		var context = canvas.getContext("2d");
 		
 		// Add a message about the loading + music...
@@ -55,7 +51,7 @@
 			document.body.appendChild(music);
 			music.load();
 		
-		var frame = 1;
+		var frame = 100;
 		var cumulativeRenderTime = 0;
 		var cameraAngle = 0;
 		var cameraOrbitRadius = 1000;
@@ -125,8 +121,6 @@
 										!(midCorner1[0] < 0		|| midCorner1[0] > width	|| midCorner1[1] < 0	|| midCorner1[1] > height) ||
 										!(midCorner2[0] < 0		|| midCorner2[0] > width	|| midCorner2[1] < 0	|| midCorner2[1] > height)) {
 										
-										// var alphaVariation = 0.5-Math.atan((Math.abs(z) + Math.abs(x))/2000);
-										
 										var alphaVariation = 1 - (Math.sqrt(Math.pow(Math.abs(z),2) + Math.pow(Math.abs(x),2)) / 1000);
 										
 										context.fillStyle = "rgba(255,255,255," + alphaVariation + ")";
@@ -146,50 +140,50 @@
 						}
 						
 						
-						context.lineWidth = 3;
-						context.beginPath();
-						context.moveTo.apply(context,projection.project(0,0,0));
-						context.lineTo.apply(context,projection.project(0,0,300));
-						context.strokeStyle = "lime";
-						context.stroke();
-							
-						context.beginPath();
-						context.moveTo.apply(context,projection.project(0,0,0));
-						context.lineTo.apply(context,projection.project(0,300,0));
-						context.strokeStyle = "blue";
-						context.stroke();
-							
-						context.beginPath();
-						context.moveTo.apply(context,projection.project(0,0,0));
-						context.lineTo.apply(context,projection.project(300,0,0));
-						context.strokeStyle = "red";
-						context.stroke();
+						// context.lineWidth = 3;
+						// 						context.beginPath();
+						// 						context.moveTo.apply(context,projection.project(0,0,0));
+						// 						context.lineTo.apply(context,projection.project(0,0,300));
+						// 						context.strokeStyle = "lime";
+						// 						context.stroke();
+						// 							
+						// 						context.beginPath();
+						// 						context.moveTo.apply(context,projection.project(0,0,0));
+						// 						context.lineTo.apply(context,projection.project(0,300,0));
+						// 						context.strokeStyle = "blue";
+						// 						context.stroke();
+						// 							
+						// 						context.beginPath();
+						// 						context.moveTo.apply(context,projection.project(0,0,0));
+						// 						context.lineTo.apply(context,projection.project(300,0,0));
+						// 						context.strokeStyle = "red";
+						// 						context.stroke();
 						
 						context.lineWidth = 5;
 						renderMocap(kashiyuka);
 						renderMocap(aachan);
 						renderMocap(nocchi);
 						
-						context.fillStyle = "black";
-						context.fillRect(0,0,100,14);
-						context.fillStyle = "white";
-						context.fillText(frame,10,10);
-						context.fillStyle = "black";
-						
+						// context.fillStyle = "black";
+						// 						context.fillRect(0,0,100,14);
+						// 						context.fillStyle = "white";
+						// 						context.fillText(frame,10,10);
+						// 						context.fillStyle = "black";
+						// 						
 						var renderTime = (new Date()).getTime() - renderStart;
 						cumulativeRenderTime += renderTime;
-						
-						context.fillStyle = "black";
-						context.fillRect(110,0,100,14);
-						context.fillStyle = "white";
-						context.fillText(renderTime,120,10);
-						context.fillStyle = "black";
-						
-						context.fillStyle = "black";
-						context.fillRect(220,0,100,14);
-						context.fillStyle = "white";
-						context.fillText(Math.round(cumulativeRenderTime/frame,2),230,10);
-						context.fillStyle = "black";
+						// 						
+						// 						context.fillStyle = "black";
+						// 						context.fillRect(110,0,100,14);
+						// 						context.fillStyle = "white";
+						// 						context.fillText(renderTime,120,10);
+						// 						context.fillStyle = "black";
+						// 						
+						// 						context.fillStyle = "black";
+						// 						context.fillRect(220,0,100,14);
+						// 						context.fillStyle = "white";
+						// 						context.fillText(Math.round(cumulativeRenderTime/frame,2),230,10);
+						// 						context.fillStyle = "black";
 						
 						
 						if (frame < nocchi.frames.length -1) {
@@ -214,14 +208,14 @@
 						
 						window.setTimeout(function() {
 							renderMocapGroup();
-						}, nextFrameTimeout);
+						}, nextFrameTimeout*5);
 					}
 					
-					music.addEventListener("loadeddata",function() {
-						if (music.readyState > 2) {
+					// music.addEventListener("loadeddata",function() {
+					// 	if (music.readyState > 2) {
 							renderMocapGroup();
-						}
-					});
+					// 	}
+					// });
 				});
 			});
 		});
@@ -284,7 +278,6 @@
 					
 					if (bone.endSite || 1) {
 						context.fillText(bone.name,jointPos[0]+20,jointPos[1]);
-						
 						// context.fillText(Math.round(bone.channelValues["Xrotation"]||0) + " x " + Math.round(bone.channelValues["Yrotation"]||0) + " x " + Math.round(bone.channelValues["Zrotation"]||0),jointPos[0]+20,jointPos[1]);
 					}
 				}
