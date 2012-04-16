@@ -49,42 +49,28 @@
 		transformationList = transformationList && transformationList instanceof Array ? transformationList : [];
 		
 		// Storage for positional data
-		var tmpPosition = [0,0,0];
+		var tmpPosition = [
+			bone.offsetX,
+			bone.offsetY,
+			bone.offsetZ
+		];
 		
 		if (!!bone.parent) {
 			var parentPosition = bone.parent.getPosition();
 			var transformSubject = bone.parent;
 			
-			// Create our vector
-			tmpPosition = [
-				bone.offsetX + parentPosition[0],
-				bone.offsetY + parentPosition[1],
-				bone.offsetZ + parentPosition[2]
-			];
-			
 			// Run through a list of our collected transformations for this bone...
 			transformationList.forEach(function(transformation,index) {
-				var transformOrigin = [
-					tmpPosition[0] - transformation.origin[0],
-					tmpPosition[1] - transformation.origin[1],
-					tmpPosition[2] - transformation.origin[2]
-				];
-				
-				var scaleFactors = [
-					
-				];
-				
 				["Z","X","Y"].forEach(function(d,i) {
 					var rFunction = d === "X" ? rotateX : d === "Y" ? rotateY : rotateZ;
-					
-					tmpPosition = rFunction(transformOrigin,transformation.rotation[i]);
+					tmpPosition = rFunction(tmpPosition,transformation.rotation[i]);
 				});
 			});
 			
-			// // Now we set our position relative to that of our direct parent.
-			// 			tmpPosition[0] = tmpPosition[0] + (!isNaN(bone.channelValues["Xposition"]) ? bone.channelValues["Xposition"] : 0);
-			// 			tmpPosition[1] = tmpPosition[1] + (!isNaN(bone.channelValues["Yposition"]) ? bone.channelValues["Yposition"] : 0);
-			// 			tmpPosition[2] = tmpPosition[2] + (!isNaN(bone.channelValues["Zposition"]) ? bone.channelValues["Zposition"] : 0);
+			// Now we set our position relative to that of our direct parent.
+			tmpPosition[0] = tmpPosition[0] + parentPosition[0] + (!isNaN(bone.channelValues["Xposition"]) ? bone.channelValues["Xposition"] : 0);
+			tmpPosition[1] = tmpPosition[1] + parentPosition[1] + (!isNaN(bone.channelValues["Yposition"]) ? bone.channelValues["Yposition"] : 0);
+			tmpPosition[2] = tmpPosition[2] + parentPosition[2] + (!isNaN(bone.channelValues["Zposition"]) ? bone.channelValues["Zposition"] : 0);
 			
 		} else {
 			// Haven't found any good BVH documentation yet, so working this out as I go.
@@ -114,7 +100,7 @@
 		bone.calcPosZ = tmpPosition[2];
 		
 		// Save any transformations in the transformation stack...
-		transformationList.push({
+		transformationList.unshift({
 			"rotation":[
 				(bone.channelValues["Zrotation"] || 0),
 				(bone.channelValues["Xrotation"] || 0),
@@ -456,6 +442,6 @@
 	function bivouac(data) {
 		return new Bivouac(data);
 	}
-	window.Bivouac = Bivouac;
+	
 	(typeof module != "undefined" && module.exports) ? (module.exports = bivouac) : (typeof define != "undefined" ? (define("bivouac", [], function() { return bivouac; })) : (glob.bivouac = bivouac));
 })(this);

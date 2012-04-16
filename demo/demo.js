@@ -18,15 +18,15 @@
 		
 		// Add a message about the loading + music...
 		context.fillText("Loading...",Math.floor(width/2),Math.floor(height/2));
-		context.fillText("WARNING: There is music.",Math.floor(width/2),Math.floor(height/2)+20);
+		context.fillText("WARNING: There is music. (was. it's coming back soon.)",Math.floor(width/2),Math.floor(height/2)+20);
 		context.fillText("There are also a few display bugs. Work in progress!",Math.floor(width/2),Math.floor(height/2)+40);
 		
 		// Camera settings...
 		var viewWidth = 1064, //width,
 			viewHeight = 690, //height,
-			viewDistance = -1400,//100
+			viewDistance = -100,
 			cameraX = -500,
-			cameraY = -600,//400
+			cameraY = 400,
 			cameraZ = -1500,
 			cameraRotZ = 0,
 			cameraRotY = -0.1,
@@ -51,7 +51,7 @@
 			document.body.appendChild(music);
 			music.load();
 		
-		var frame = 100;
+		var frame = 1;
 		var cumulativeRenderTime = 0;
 		var cameraAngle = 0;
 		var cameraOrbitRadius = 1000;
@@ -92,8 +92,8 @@
 						}
 						
 						if (frame === 1 && music.readyState > 1) {
-							music.currentTime = 0;
-							music.play();
+							// music.currentTime = 0;
+							// 							music.play();
 						}
 						
 						if (frame % 18 === 0) {
@@ -116,6 +116,7 @@
 										midCorner1 = projection.project(x+checkWidth,0,z),
 										midCorner2 = projection.project(x,0,z+checkWidth);
 									
+									// Ensure at least some of the square is visible on screen...
 									if (!(firstCorner[0] < 0	|| firstCorner[0] > width	|| firstCorner[1] < 0 	| firstCorner[1] > height) ||
 										!(lastCorner[0] < 0		|| lastCorner[0] > width	|| lastCorner[1] < 0	|| lastCorner[1] > height) ||
 										!(midCorner1[0] < 0		|| midCorner1[0] > width	|| midCorner1[1] < 0	|| midCorner1[1] > height) ||
@@ -139,59 +140,58 @@
 							}
 						}
 						
+						// Draw 3D Axis
 						
-						// context.lineWidth = 3;
-						// 						context.beginPath();
-						// 						context.moveTo.apply(context,projection.project(0,0,0));
-						// 						context.lineTo.apply(context,projection.project(0,0,300));
-						// 						context.strokeStyle = "lime";
-						// 						context.stroke();
-						// 							
-						// 						context.beginPath();
-						// 						context.moveTo.apply(context,projection.project(0,0,0));
-						// 						context.lineTo.apply(context,projection.project(0,300,0));
-						// 						context.strokeStyle = "blue";
-						// 						context.stroke();
-						// 							
-						// 						context.beginPath();
-						// 						context.moveTo.apply(context,projection.project(0,0,0));
-						// 						context.lineTo.apply(context,projection.project(300,0,0));
-						// 						context.strokeStyle = "red";
-						// 						context.stroke();
+						context.lineWidth = 3;
+						context.beginPath();
+						context.moveTo.apply(context,projection.project(0,0,0));
+						context.lineTo.apply(context,projection.project(0,0,300));
+						context.strokeStyle = "lime";
+						context.stroke();
+																			
+						context.beginPath();
+						context.moveTo.apply(context,projection.project(0,0,0));
+						context.lineTo.apply(context,projection.project(0,300,0));
+						context.strokeStyle = "blue";
+						context.stroke();
+																			
+						context.beginPath();
+						context.moveTo.apply(context,projection.project(0,0,0));
+						context.lineTo.apply(context,projection.project(300,0,0));
+						context.strokeStyle = "red";
+						context.stroke();
 						
+						
+						// Draw, well... the actual mocap
 						context.lineWidth = 5;
 						renderMocap(kashiyuka);
 						renderMocap(aachan);
 						renderMocap(nocchi);
 						
-						// context.fillStyle = "black";
-						// 						context.fillRect(0,0,100,14);
-						// 						context.fillStyle = "white";
-						// 						context.fillText(frame,10,10);
-						// 						context.fillStyle = "black";
-						// 						
+						// Get the render time and add for cumulative time
 						var renderTime = (new Date()).getTime() - renderStart;
 						cumulativeRenderTime += renderTime;
-						// 						
-						// 						context.fillStyle = "black";
-						// 						context.fillRect(110,0,100,14);
-						// 						context.fillStyle = "white";
-						// 						context.fillText(renderTime,120,10);
-						// 						context.fillStyle = "black";
-						// 						
-						// 						context.fillStyle = "black";
-						// 						context.fillRect(220,0,100,14);
-						// 						context.fillStyle = "white";
-						// 						context.fillText(Math.round(cumulativeRenderTime/frame,2),230,10);
-						// 						context.fillStyle = "black";
 						
+						// Draw boxes for displaying the data..
+						context.fillStyle = "white";
+						context.fillRect(0,0,100,14);
+						context.fillRect(110,0,100,14);
+						context.fillRect(220,0,100,14);
 						
+						// Now spit out render stats: Frame, render time for frame, average render time.
+						context.fillStyle = "black";
+						context.fillText(frame,10,10);
+						context.fillText(renderTime,120,10);
+						context.fillText(Math.round((cumulativeRenderTime/frame)*100)/100,230,10);
+						
+						// Advance frame if we need to
 						if (frame < nocchi.frames.length -1) {
 							frame ++;
 						} else {
 							frame = 1;
 						}
 						
+						// All this crap needs to be worked out.
 						var nextFrameTimeout = nocchi.frameTime - renderTime;
 						
 						if (nextFrameTimeout < 0) {
@@ -201,9 +201,6 @@
 							
 							// And how much time is left until the next frame?
 							nextFrameTimeout = renderTime % nocchi.frameTime;
-							
-							// console.log("Skipped %d frames, (due to excessive rendering time of %dms) timeout to next frame in %dms.",frameSkip,renderTime,nextFrameTimeout);
-							// console.log(cumulativeRenderTime/frame);
 						}
 						
 						window.setTimeout(function() {
@@ -274,11 +271,12 @@
 					context.fillRect.apply(context,projection.project(bone.calcPosX,bone.calcPosY,bone.calcPosZ).concat([5,5]));
 					
 					var jointPos = projection.project(bone.calcPosX,bone.calcPosY,bone.calcPosZ);
+					viewDistance
+					
 					context.fillStyle = "rgba(0,0,0,0.3)";
 					
 					if (bone.endSite || 1) {
 						context.fillText(bone.name,jointPos[0]+20,jointPos[1]);
-						// context.fillText(Math.round(bone.channelValues["Xrotation"]||0) + " x " + Math.round(bone.channelValues["Yrotation"]||0) + " x " + Math.round(bone.channelValues["Zrotation"]||0),jointPos[0]+20,jointPos[1]);
 					}
 				}
 			}
