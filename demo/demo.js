@@ -22,24 +22,15 @@
 		context.fillText("There are also a few display bugs. Work in progress!",Math.floor(width/2),Math.floor(height/2)+40);
 		
 		// Camera settings...
-		var viewWidth = 1064, //width,
-			viewHeight = 690, //height,
-			viewDistance = -100,
-			cameraX = -500,
-			cameraY = 400,
-			cameraZ = -1500,
+		var viewWidth = 1*1.6, //width,
+			viewHeight = 1, //height,
+			viewDistance = 100,
+			cameraX = 500,
+			cameraY = 500,
+			cameraZ = 1500,
 			cameraRotZ = 0,
-			cameraRotY = -0.1,
-			cameraRotX = -0.2;
-			
-		// Calculate the camera distance from the 0,0 point in the XZ plane
-		var xzDistance = Math.sqrt(Math.pow(Math.abs(cameraZ),2) + Math.pow(Math.abs(cameraX),2));
-		
-		// Now we can calculate the vertical diagonal distance in 3D.
-		var vDistance = Math.sqrt(Math.pow(Math.abs(cameraY),2) + Math.pow(xzDistance,2));
-		
-		// Calculate the X rotation of the camera
-		// cameraRotZ = 1 - Math.tan(xzDistance);
+			cameraRotY = 0.1,
+			cameraRotX = 0.2;
 		
 		var camera		= new perspex.Camera(cameraX,cameraY,cameraZ,cameraRotX,cameraRotY,cameraRotZ,viewWidth,viewHeight,viewDistance),
 			projection	= perspex(camera,{ clamp: false });
@@ -51,11 +42,12 @@
 			document.body.appendChild(music);
 			music.load();
 		
-		var frame = 1;
+		var frame = 500;
 		var cumulativeRenderTime = 0;
 		var cameraAngle = 0;
 		var cameraOrbitRadius = 1000;
 		var orbitSpeed = 0.3;
+		var cameraHeightOffset = 500;
 		
 		loadBVH("kashiyuka",function(kashiyuka) {
 			loadBVH("aachan",function(aachan) {
@@ -66,24 +58,25 @@
 						var renderStart = (new Date()).getTime();
 						
 						// Camera rotation
-						cameraAngle = cameraAngle < 360 ? cameraAngle + orbitSpeed : cameraAngle = 0;
+						cameraAngle = cameraAngle < 360 ? cameraAngle + orbitSpeed : -360;
 						cameraX = (Math.sin(cameraAngle * (Math.PI/180)) * cameraOrbitRadius);
 						cameraZ = (Math.cos(cameraAngle * (Math.PI/180)) * cameraOrbitRadius);
-						cameraRotY = ((cameraAngle-250) * (Math.PI/180));
+						cameraRotY = ((cameraAngle - 15) * (Math.PI/180));
 						
-						if (cameraY > -600) {
-							tweenOut = (600 - Math.abs(cameraY)) / 5;
-							tweenOut = 5 < tweenOut ? 5 : tweenOut;
-							cameraY -= tweenOut;
-						}
+						// Height oscillation
+						cameraHeightOffset = cameraHeightOffset > 110 ? cameraHeightOffset - 1 : cameraHeightOffset;
+						cameraY = cameraHeightOffset + Math.sin(Math.abs(cameraAngle)/360) * 200
+						cameraRotX = (((Math.sin(Math.abs(cameraAngle)/360)*3) - 3) * (Math.PI/180));
 						
+						// Assign the position
 						camera.setPosition(cameraX,cameraY,cameraZ);
 						camera.setRotation(cameraRotX,cameraRotY,cameraRotZ);
-																	
-						if (viewDistance > -1400) {
+						
+						// Initial zoom-in						
+						if (viewDistance < 1400) {
 							var tweenOut = (1400 - Math.abs(viewDistance)) / 2;
 							tweenOut = 1 < tweenOut ? 1 : tweenOut;
-							viewDistance -= tweenOut
+							viewDistance += tweenOut
 							camera.setViewOffset(viewWidth,viewHeight,viewDistance);
 						}
 						
@@ -93,11 +86,11 @@
 						
 						if (frame === 1 && music.readyState > 1) {
 							// music.currentTime = 0;
-							// 							music.play();
+							// music.play();
 						}
 						
 						if (frame % 18 === 0) {
-							crazyHue = Math.random()*360;
+							crazyHue = Math.random()*360;	
 						}
 						
 						context.fillStyle = "hsla(" + crazyHue + ",100%,80%,1)";
@@ -105,34 +98,29 @@
 						context.fillStyle = "black";
 						
 						// checkerboard
-						var checkWidth = 100;
-						for (var x = -1000; x <=1000; x += checkWidth) {
-							for (var z = -1000; z <=1000; z += checkWidth) {
+						var checkWidth = 50, renderDistance = 1000;
+						for (var x = renderDistance * -1; x <= renderDistance; x += checkWidth) {
+							for (var z = renderDistance * -1; z <= renderDistance; z += checkWidth) {
 								
 								if ((z - x) % (checkWidth * 2)) {
 									
-									var firstCorner = projection.project(x,0,z),
-										lastCorner = projection.project(x+checkWidth,0,z+checkWidth),
-										midCorner1 = projection.project(x+checkWidth,0,z),
-										midCorner2 = projection.project(x,0,z+checkWidth);
+									var points = [
+										[x,					0,	z				],
+										[x + checkWidth,	0,	z				],
+										[x + checkWidth,	0,	z + checkWidth	],
+										[x,					0,	z + checkWidth	]
+									];
 									
-									// Ensure at least some of the square is visible on screen...
-									if (!(firstCorner[0] < 0	|| firstCorner[0] > width	|| firstCorner[1] < 0 	| firstCorner[1] > height) ||
-										!(lastCorner[0] < 0		|| lastCorner[0] > width	|| lastCorner[1] < 0	|| lastCorner[1] > height) ||
-										!(midCorner1[0] < 0		|| midCorner1[0] > width	|| midCorner1[1] < 0	|| midCorner1[1] > height) ||
-										!(midCorner2[0] < 0		|| midCorner2[0] > width	|| midCorner2[1] < 0	|| midCorner2[1] > height)) {
-										
-										var alphaVariation = 1 - (Math.sqrt(Math.pow(Math.abs(z),2) + Math.pow(Math.abs(x),2)) / 1000);
+									// If we're supposed to render this polygon...
+									if (projection.shouldDrawPolygon(points,width,height)) {
+										var alphaVariation = 1 - (Math.sqrt(Math.pow(z,2) + Math.pow(x,2)) / renderDistance);
 										
 										context.fillStyle = "rgba(255,255,255," + alphaVariation + ")";
-									
-										context.lineWidth = 1;
 										context.beginPath();
-										context.moveTo.apply(context,projection.project(x,0,z));
-										context.lineTo.apply(context,projection.project(x+checkWidth,0,z));
-										context.lineTo.apply(context,projection.project(x+checkWidth,0,z+checkWidth));
-										context.lineTo.apply(context,projection.project(x,0,z+checkWidth));
-										context.lineTo.apply(context,projection.project(x,0,z));
+										context.moveTo.apply(context,projection.project.apply(projection,points[points.length-1]));
+										points.forEach(function(point) {
+											context.lineTo.apply(context,projection.project.apply(projection,point));
+										});
 										context.closePath();
 										context.fill();
 									}
@@ -208,10 +196,8 @@
 						}, nextFrameTimeout);
 					}
 					
-					// music.addEventListener("loadeddata",function() {
-					// 	if (music.readyState > 2) {
-							renderMocapGroup();
-					// 	}
+					// music.addEventListener("canplaythrough",function() {
+						renderMocapGroup();
 					// });
 				});
 			});
@@ -220,7 +206,12 @@
 		// Mocap render function
 		function renderMocap(mocap) {
 			// Advance to frame
-			mocap.getForFrame(frame);
+			try {
+				mocap.getForFrame(frame);
+			} catch(Error) {
+				// Some frameskip happened or something was misaligned.
+				// Dust ourselves off and move on.
+			}
 			
 			for (var bone in mocap.boneList) {
 				if (mocap.boneList.hasOwnProperty(bone)) {
@@ -271,9 +262,10 @@
 					context.fillRect.apply(context,projection.project(bone.calcPosX,bone.calcPosY,bone.calcPosZ).concat([5,5]));
 					
 					var jointPos = projection.project(bone.calcPosX,bone.calcPosY,bone.calcPosZ);
-					viewDistance
+					var viewdist = Math.sqrt(Math.pow(bone.calcPosX - camera.cX,2) + Math.pow(bone.calcPosZ - camera.cZ,2));
+					var jointNameOpacity = (1000 - viewdist) > 0 ? (1000 - viewdist) / 2000 : 0;
 					
-					context.fillStyle = "rgba(0,0,0,0.3)";
+					context.fillStyle = "rgba(0,0,0," + jointNameOpacity + ")";
 					
 					if (bone.endSite || 1) {
 						context.fillText(bone.name,jointPos[0]+20,jointPos[1]);
@@ -313,4 +305,4 @@
 		}
 		
 	}
-})()
+})();
