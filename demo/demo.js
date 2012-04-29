@@ -98,7 +98,7 @@
 						context.fillStyle = "black";
 						
 						// checkerboard
-						var checkWidth = 50, renderDistance = 1000;
+						var checkWidth = 100, renderDistance = 1000;
 						for (var x = renderDistance * -1; x <= renderDistance; x += checkWidth) {
 							for (var z = renderDistance * -1; z <= renderDistance; z += checkWidth) {
 								
