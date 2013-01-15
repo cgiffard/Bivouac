@@ -1,0 +1,24 @@
+{
+  "name": "bivouac",
+  "version": "0.0.1",
+  "description": "BVH parser for JavaScript",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/cgiffard/Bivouac.git"
+  },
+  "keywords": [
+    "bvh",
+    "biovision",
+    "skeleton",
+    "motion",
+    "capture",
+    "euler",
+    "joint"
+  ],
+  "author": "Christopher Giffard (christopher.giffard@cgiffard.com.au)",
+  "license": "BSD"
+}
